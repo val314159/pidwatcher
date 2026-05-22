@@ -92,5 +92,7 @@ def write_pid_file(filename, filedir=READYDIR):
     with tmp as f:
         f.write(str(os.getpid()))
         pass
-    os.replace(tmp.name, filedir + '/' + filename)
-    return prog
+    path = os.path.realpath(
+        os.path.expanduser(filedir + '/' + filename))
+    os.replace(tmp.name, path)
+    return path
