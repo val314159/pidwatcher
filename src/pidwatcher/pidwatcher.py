@@ -1,13 +1,15 @@
-import os, queue
+import os, queue, tempfile
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+
+READYDIR = os.getenv('READYDIR','/tmp')
 
 
 class PidFileWatcher(FileSystemEventHandler):
 
     def __init__(self, *filenames,
-                 filedir=os.getenv('READYDIR','/tmp'),
-                 debug=False):
+                 filedir=READYDIR, debug=False):
         super()
         self.debug = debug
         self.q = queue.Queue()
@@ -81,9 +83,14 @@ class PidFileWatcher(FileSystemEventHandler):
         self.ob.join()
 
 
-def write_pid_file(path):
-    prog = path.split('/')[-1].split('.')[0]
-    with open(prog, 'w') as f:
+def basename(path):
+    return path.split('/')[-1].split('.')[0]
+
+
+def write_pid_file(filename, filedir=READYDIR):
+    tmp = tempfile.NamedTemporaryFile(mode='w', delete=False)
+    with tmp as f:
         f.write(str(os.getpid()))
         pass
+    os.replace(tmp.name, filedir + '/' + filename)
     return prog
