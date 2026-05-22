@@ -1,4 +1,4 @@
-import os, queue, tempfile
+import os, sys, queue, tempfile, atexit, signal
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -87,7 +87,17 @@ def basename(path):
     return path.split('/')[-1].split('.')[0]
 
 
+def unlink_pid_file(path):
+    print("UNLINK", path)
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+    return
+
+
 def write_pid_file(filename, filedir=READYDIR):
+    os.makedirs(filedir, exist_ok=True)
     tmp = tempfile.NamedTemporaryFile(mode='w', delete=False)
     with tmp as f:
         f.write(str(os.getpid()))
@@ -95,4 +105,10 @@ def write_pid_file(filename, filedir=READYDIR):
     path = os.path.realpath(
         os.path.expanduser(filedir + '/' + filename))
     os.replace(tmp.name, path)
+    prev_sigterm = signal.getsignal(signal.SIGTERM)
+    def handle_shutdown(signum, frame):
+        unlink_pid_file(path)
+        signal.signal(signum, prev_sigterm)
+        return os.kill(os.getpid(), signum)                               
+    signal.signal(signal.SIGTERM, handle_shutdown)
     return path
