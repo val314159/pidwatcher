@@ -3,7 +3,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 
-READYDIR = os.getenv('READYDIR','/tmp')
+READYDIR = os.getenv('READYDIR','/tmp/ready')
 
 
 class PidFileWatcher(FileSystemEventHandler):
@@ -11,6 +11,7 @@ class PidFileWatcher(FileSystemEventHandler):
     def __init__(self, *filenames,
                  filedir=READYDIR, debug=False):
         super()
+        os.makedirs(filedir, exist_ok=True)
         self.debug = debug
         self.q = queue.Queue()
         self.ob = Observer()
@@ -30,6 +31,9 @@ class PidFileWatcher(FileSystemEventHandler):
         if evt.src_path in self.to_match:
             self.q.put((evt.event_type, evt.src_path))
 
+    def on_moved(self, event):
+        return self.activated(event)
+        
     def on_modified(self, event):
         return self.activated(event)
 
@@ -79,6 +83,7 @@ class PidFileWatcher(FileSystemEventHandler):
                 pass
             self.dprint("POST", self.to_match)
             pass
+        self.dprint("ALL THE FILES ARE VERIFIED", self.to_match)
         self.ob.stop()
         self.ob.join()
 
